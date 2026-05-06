@@ -2,6 +2,7 @@ const sections = Array.from(document.querySelectorAll("main section[id]"));
 const navLinks = Array.from(document.querySelectorAll(".site-nav a[href^='#']"));
 const langToggle = document.getElementById("langToggle");
 const copyEmailButtons = Array.from(document.querySelectorAll(".copy-email[data-email]"));
+const inlineTranslationElements = Array.from(document.querySelectorAll("[data-en]"));
 const isAuthorPage = window.location.pathname.toLowerCase().endsWith("author.html");
 
 const commonTranslations = [
@@ -390,10 +391,30 @@ function applyLanguage(language) {
     });
   });
 
+  applyInlineTranslations(isEnglish);
+
   if (langToggle) {
     langToggle.textContent = isEnglish ? "中" : "EN";
     langToggle.setAttribute("aria-label", isEnglish ? "切換到中文" : "Switch to English");
   }
+}
+
+function applyInlineTranslations(isEnglish) {
+  inlineTranslationElements.forEach((element) => {
+    if (!element.dataset.zhOriginal) {
+      element.dataset.zhOriginal = element.textContent;
+    }
+
+    element.textContent = isEnglish ? element.dataset.en : element.dataset.zhOriginal;
+  });
+}
+
+function captureInlineOriginals() {
+  inlineTranslationElements.forEach((element) => {
+    if (!element.dataset.zhOriginal) {
+      element.dataset.zhOriginal = element.textContent;
+    }
+  });
 }
 
 function initLanguageToggle() {
@@ -402,6 +423,7 @@ function initLanguageToggle() {
   }
 
   captureOriginals();
+  captureInlineOriginals();
   const savedLanguage = readSavedLanguage();
   applyLanguage(savedLanguage);
 
