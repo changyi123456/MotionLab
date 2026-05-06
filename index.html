@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MotionLab Tracker 技術與操作指南</title>
+    <meta
+      name="description"
+      content="MotionLab Tracker 技術與操作指南，介紹 MotionLab 2D / 3D 影片追蹤工具的運算原理、操作流程、下載資源與作者資訊。"
+    />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:title" content="MotionLab Tracker 技術與操作指南" />
+    <meta
+      property="og:description"
+      content="MotionLab 2D / 3D Tracker 的運算原理、操作流程、下載資源與作者資訊。"
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="./assets/app-3d.png" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="./index.html" aria-label="MotionLab Tracker Guide">
+        <img src="./assets/aiphysics-teacher-logo.png" alt="MotionLab logo" />
+        <span>MotionLab Tracker Guide</span>
+      </a>
+      <nav class="site-nav" aria-label="主要導覽">
+        <a href="#overview">總覽</a>
+        <a href="#principles">運算原理</a>
+        <a href="#workflow">操作說明</a>
+        <a href="#downloads">資源下載</a>
+        <a href="./author.html">作者資訊</a>
+        <button class="lang-toggle" id="langToggle" type="button" aria-label="Switch language">EN</button>
+      </nav>
+    </header>
+
+    <main>
+      <section class="intro-section" id="overview">
+        <div class="intro-copy">
+          <p class="section-label">2D 與 3D 影片追蹤教學網站</p>
+          <h1>MotionLab Tracker 技術與操作指南</h1>
+          <p>
+            這個網站整理 MotionLab 2D Workbench 與 MotionLab 3D Workbench 的核心概念、
+            追蹤流程、校正方法與輸出資料意義。之後可接上 GitHub 發布頁、資源包下載連結、
+            課程講義與示範影片。
+          </p>
+          <div class="intro-actions">
+            <a class="button primary" href="#workflow">查看操作流程</a>
+            <a class="button" href="#references">查看技術參考</a>
+          </div>
+        </div>
+        <div class="app-showcase" aria-label="MotionLab 2D 與 3D 應用程式截圖">
+          <figure class="app-shot app-shot-primary">
+            <img src="./assets/app-2d.png" alt="MotionLab 2D Workbench application screenshot" />
+            <figcaption>
+              <strong>MotionLab 2D Workbench</strong>
+              <span>單視角影片追蹤、比例尺校正、資料表與圖表分析。</span>
+            </figcaption>
+          </figure>
+          <figure class="app-shot">
+            <img src="./assets/app-3d.png" alt="MotionLab 3D Workbench application screenshot" />
+            <figcaption>
+              <strong>MotionLab 3D Workbench</strong>
+              <span>雙視角 XZ / YZ 追蹤與三維軌跡融合。</span>
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section class="content-section" id="principles">
+        <div class="section-head">
+          <p class="section-label">Core Math</p>
+          <h2>技術運算原理</h2>
+        </div>
+
+        <div class="split-block">
+          <div>
+            <h3>2D Tracker：從影像像素到物理量</h3>
+            <p>
+              2D 模式以單一影片為基礎。使用者先設定原點、比例尺與座標軸方向，
+              程式再把每一幀標記到的像素位置轉成真實世界座標。若影像水平與實驗座標有夾角，
+              會以座標旋轉校正；若已知距離為 L、對應像素距離為 p，比例可寫成 p / L。
+            </p>
+            <div class="equation-stack" aria-label="2D tracker coordinate and derivative equations">
+              <figure class="equation-card">
+                <math display="block">
+                  <mrow>
+                    <mi>S</mi>
+                    <mo>=</mo>
+                    <mfrac>
+                      <msub><mi>d</mi><mi>px</mi></msub>
+                      <mi>L</mi>
+                    </mfrac>
+                  </mrow>
+                </math>
+                <figcaption>比例尺：已知距離 L 對應像素距離 d<sub>px</sub>，得到每公尺像素數 S。</figcaption>
+              </figure>
+              <figure class="equation-card">
+                <math display="block">
+                  <mrow>
+                    <mo>[</mo>
+                    <mtable>
+                      <mtr><mtd><mi>X</mi></mtd></mtr>
+                      <mtr><mtd><mi>Y</mi></mtd></mtr>
+                    </mtable>
+                    <mo>]</mo>
+                    <mo>=</mo>
+                    <mfrac>
+                      <mn>1</mn>
+                      <mi>S</mi>
+                    </mfrac>
+                    <msub><mi>R</mi><mi>θ</mi></msub>
+                    <mo>[</mo>
+                    <mtable>
+                      <mtr><mtd><mrow><mi>u</mi><mo>-</mo><msub><mi>u</mi><mn>0</mn></msub></mrow></mtd></mtr>
+                      <mtr><mtd><mrow><mi>v</mi><mo>-</mo><msub><mi>v</mi><mn>0</mn></msub></mrow></mtd></mtr>
+                    </mtable>
+                    <mo>]</mo>
+                  </mrow>
+                </math>
+                <figcaption>座標轉換：扣掉原點後，依座標軸角度 θ 旋轉，再換算成真實單位。</figcaption>
+              </figure>
+              <figure class="equation-card">
+                <math display="block">
+                  <mrow>
+                    <mi>v</mi>
+                    <mo stretchy="false">(</mo><mi>t</mi><mo stretchy="false">)</mo>
+                    <mo>≈</mo>
+                    <mfrac>
+                      <mrow><mi>x</mi><mo stretchy="false">(</mo><mi>t</mi><mo>+</mo><mi>Δt</mi><mo stretchy="false">)</mo><mo>-</mo><mi>x</mi><mo stretchy="false">(</mo><mi>t</mi><mo>-</mo><mi>Δt</mi><mo stretchy="false">)</mo></mrow>
+                      <mrow><mn>2</mn><mi>Δt</mi></mrow>
+                    </mfrac>
+                  </mrow>
+                </math>
+                <figcaption>速度與加速度由相鄰幀的中心差分近似取得。</figcaption>
+              </figure>
+            </div>
+            <p>
+              軌跡資料可進一步產生位置、速度、加速度、路徑長、角度與圖表資料。
+              自動追蹤則以使用者給定的初始目標區域為模板，在後續幀搜尋最相近位置；
+              centroid snap 可協助把點吸附到亮點或暗點中心，降低人工點選誤差。
+            </p>
+          </div>
+          <div class="note-panel">
+            <h4>2D 適用場景</h4>
+            <ul>
+              <li>拋體運動、簡諧運動、碰撞、圓周運動等平面運動。</li>
+              <li>攝影機固定、量測平面明確，或物體主要在單一平面內移動。</li>
+              <li>需要快速得到 t、x、y、vx、vy、ax、ay 等資料表。</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="split-block reverse">
+          <div>
+            <h3>3D Tracker：雙視角 XZ / YZ 融合</h3>
+            <p>
+              目前 MotionLab 3D Workbench 採用兩個近似正交視角：相機 A 量到 XZ 平面，
+              相機 B 量到 YZ 平面。兩邊各自完成原點與比例尺校正後，程式依同步幀與 FPS 將
+              兩條時間序列對齊，取共同時間範圍，融合出 X、Y、Z 軌跡。
+            </p>
+            <div class="equation-stack" aria-label="3D dual view fusion equations">
+              <figure class="equation-card">
+                <math display="block">
+                  <mrow>
+                    <mi>A</mi><mo>:</mo>
+                    <mo stretchy="false">(</mo>
+                    <msub><mi>x</mi><mi>A</mi></msub>
+                    <mo stretchy="false">(</mo><mi>t</mi><mo stretchy="false">)</mo>
+                    <mo>,</mo>
+                    <msub><mi>z</mi><mi>A</mi></msub>
+                    <mo stretchy="false">(</mo><mi>t</mi><mo stretchy="false">)</mo>
+                    <mo stretchy="false">)</mo>
+                    <mo>,</mo>
+                    <mspace width="1em"></mspace>
+                    <mi>B</mi><mo>:</mo>
+                    <mo stretchy="false">(</mo>
+                    <msub><mi>y</mi><mi>B</mi></msub>
+                    <mo stretchy="false">(</mo><mi>t</mi><mo stretchy="false">)</mo>
+                    <mo>,</mo>
+                    <msub><mi>z</mi><mi>B</mi></msub>
+                    <mo stretchy="false">(</mo><mi>t</mi><mo stretchy="false">)</mo>
+                    <mo stretchy="false">)</mo>
+                  </mrow>
+                </math>
+                <figcaption>相機 A 提供 XZ 分量，相機 B 提供 YZ 分量。</figcaption>
+              </figure>
+              <figure class="equation-card">
+                <math display="block">
+                  <mrow>
+                    <msub><mi>z</mi><mi>A</mi></msub>
+                    <mo>=</mo>
+                    <mi>Z</mi>
+                    <mo stretchy="false">(</mo>
+                    <mn>1</mn><mo>+</mo><mi>α</mi><mi>Y</mi>
+                    <mo stretchy="false">)</mo>
+                    <mo>,</mo>
+                    <mspace width="1em"></mspace>
+                    <msub><mi>z</mi><mi>B</mi></msub>
+                    <mo>=</mo>
+                    <mi>Z</mi>
+                    <mo stretchy="false">(</mo>
+                    <mn>1</mn><mo>+</mo><mi>β</mi><mi>X</mi>
+                    <mo stretchy="false">)</mo>
+                  </mrow>
+                </math>
+                <figcaption>一階視差模型：物體沿相機深度方向移動時，量到的 Z 會有比例變化。</figcaption>
+              </figure>
+              <figure class="equation-card">
+                <math display="block">
+                  <mrow>
+                    <munder>
+                      <mi>min</mi>
+                      <mrow><mi>α</mi><mo>,</mo><mi>β</mi><mo>,</mo><mi>λ</mi><mo>,</mo><mi>δ</mi></mrow>
+                    </munder>
+                    <mspace width="0.5em"></mspace>
+                    <msub><mo>Σ</mo><mi>t</mi></msub>
+                    <msup>
+                      <mrow>
+                        <mo>[</mo>
+                        <mfrac>
+                          <msub><mi>z</mi><mi>A</mi></msub>
+                          <mrow><mn>1</mn><mo>+</mo><mi>α</mi><mi>Y</mi></mrow>
+                        </mfrac>
+                        <mo>-</mo>
+                        <mfrac>
+                          <mrow><mi>λ</mi><msub><mi>z</mi><mi>B</mi></msub><mo>+</mo><mi>δ</mi></mrow>
+                          <mrow><mn>1</mn><mo>+</mo><mi>β</mi><mi>X</mi></mrow>
+                        </mfrac>
+                        <mo>]</mo>
+                      </mrow>
+                      <mn>2</mn>
+                    </msup>
+                  </mrow>
+                </math>
+                <figcaption>自校正目標：讓兩個視角校正後的 Z 軸盡量一致。</figcaption>
+              </figure>
+            </div>
+            <p>
+              為了處理兩台相機校正後仍可能存在的 Z 軸尺度差與近距離視差，3D 引擎使用
+              Z 軸一致性做自校正：同一個物體在兩個視角中應該有相同的 Z。程式會估計
+              Z 對齊的 scale、offset，以及一階視差修正參數，並回報共同有效幀數與 Z 殘差 RMS。
+            </p>
+          </div>
+          <div class="note-panel">
+            <h4>3D 適用場景</h4>
+            <ul>
+              <li>需要 X、Y、Z 三維軌跡，但希望用較簡單的雙視角設定完成。</li>
+              <li>兩台攝影機可分別拍到 XZ 與 YZ 分量，且時間能夠同步。</li>
+              <li>想快速比較 3D 軌跡圖、資料表與輸出 CSV/Python 繪圖腳本。</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="content-section compact" id="workflow">
+        <div class="section-head">
+          <p class="section-label">How To Use</p>
+          <h2>操作說明</h2>
+        </div>
+
+        <div class="workflow-grid">
+          <article class="workflow-card">
+            <h3>2D Workbench 操作流程</h3>
+            <ol>
+              <li>開啟影片，確認 FPS、總幀數與畫面比例。</li>
+              <li>使用比例尺與座標工具，設定真實距離、原點與軸向。</li>
+              <li>建立 Point Mass 或其他分析物件，逐幀標記位置。</li>
+              <li>需要精細標記時可使用影片放大縮小與逐幀快捷鍵。</li>
+              <li>可啟用 centroid snap 或 auto track，加快連續幀追蹤。</li>
+              <li>到資料表與圖表檢查位置、速度、加速度，再匯出 CSV。</li>
+            </ol>
+          </article>
+
+          <article class="workflow-card">
+            <h3>3D Workbench 操作流程</h3>
+            <ol>
+              <li>載入相機 A：XZ 視角影片；載入相機 B：YZ 視角影片。</li>
+              <li>兩個視角都設定原點、比例尺與同步幀。</li>
+              <li>在兩個視角追蹤同一物體，保持標記點代表同一物理位置。</li>
+              <li>執行 Z 融合，檢查共同有效幀數、Z 殘差 RMS 與融合摘要。</li>
+              <li>切換到 3D 軌跡圖，使用頂視、正視、側視與等角視角檢查軌跡。</li>
+              <li>匯出資料包，取得 CSV、3D 圖、四視圖、Python 腳本與專案檔。</li>
+            </ol>
+          </article>
+        </div>
+      </section>
+
+      <section class="content-section" id="downloads">
+        <div class="section-head">
+          <p class="section-label">Downloads</p>
+          <h2>資源下載與版本資訊</h2>
+          <p>2D 與 3D 可攜版已上傳至 GitHub Releases，下載後解壓縮即可執行；開源資料與 source package 目前先維持未公開。</p>
+        </div>
+
+        <div class="download-list">
+          <div class="download-row">
+            <div>
+              <strong>MotionLab 2D Workbench 可攜版</strong>
+              <span>已上傳至 GitHub Releases，下載後解壓縮即可執行。</span>
+            </div>
+            <a class="button" href="https://github.com/changyi123456/MotionLab/releases" target="_blank" rel="noreferrer">GitHub Release</a>
+          </div>
+          <div class="download-row">
+            <div>
+              <strong>MotionLab 3D Workbench 可攜版</strong>
+              <span>已上傳至 GitHub Releases，下載後解壓縮即可執行。</span>
+            </div>
+            <a class="button" href="https://github.com/changyi123456/MotionLab/releases" target="_blank" rel="noreferrer">GitHub Release</a>
+          </div>
+          <div class="download-row">
+            <div>
+              <strong>開源資料與 source package</strong>
+              <span>目前先標示未公開，等之後正式釋出再補下載連結。</span>
+            </div>
+            <a class="button disabled" href="#" aria-disabled="true">未公開</a>
+          </div>
+          <div class="download-row">
+            <div>
+              <strong>示範影片與教學資料包</strong>
+              <span>可放範例影片、示範專案、輸出 CSV 與課堂操作講義。</span>
+            </div>
+            <a class="button disabled" href="#" aria-disabled="true">待提供</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="content-section references" id="references">
+        <div class="section-head">
+          <p class="section-label">Technical References</p>
+          <h2>技術參考來源</h2>
+        </div>
+        <p>
+          本網站的操作脈絡與術語整理參考舊 Tracker / Open Source Physics 的公開資源，
+          以及 Tyson Hedrick 的 DLTdv8 公開手冊。MotionLab 的介面與資料流程會以本專案目前的
+          2D 與 3D 實作為準；這些來源是技術背景與教學脈絡，不表示完全移植或等同於原工具。
+        </p>
+        <ul class="reference-list">
+          <li>
+            <a href="https://opensourcephysics.github.io/tracker-website/index.html" target="_blank" rel="noreferrer">
+              Tracker Video Analysis and Modeling Tool for Physics Education
+            </a>
+            <span>Open Source Physics / Tracker 官方網站與功能說明。</span>
+          </li>
+          <li>
+            <a href="https://opensourcephysics.github.io/tracker-website/help/gettingstarted.html" target="_blank" rel="noreferrer">
+              Tracker Help: Getting Started
+            </a>
+            <span>Tracker 典型操作流程：開啟影片、校正、設定座標、追蹤、分析、輸出。</span>
+          </li>
+          <li>
+            <a href="https://github.com/OpenSourcePhysics/tracker" target="_blank" rel="noreferrer">
+              OpenSourcePhysics / tracker GitHub
+            </a>
+            <span>Tracker 是建立在 Open Source Physics framework 上的影片分析與建模工具。</span>
+          </li>
+          <li>
+            <a href="https://biomech.web.unc.edu/dltdv8_manual/" target="_blank" rel="noreferrer">
+              DLTdv8 online manual
+            </a>
+            <span>確認名稱為 DLTdv8，說明 DLT coefficients、2D/3D DLT 校正與追蹤概念。</span>
+          </li>
+        </ul>
+      </section>
+
+      <section class="content-section author-preview">
+        <div>
+          <p class="section-label">About The Author</p>
+          <h2>江長屹老師</h2>
+          <p>物理教育工作者，投入高中物理教學、探究與實作、物理競賽指導與物理模擬創作，並開發 MotionLab 作為課堂與研究用的影片追蹤工具。</p>
+        </div>
+        <a class="button" href="./author.html">查看完整作者介紹</a>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <span>MotionLab Tracker Guide</span>
+      <span>Technical documentation site draft</span>
+    </footer>
+
+    <script src="./script.js"></script>
+  </body>
+</html>

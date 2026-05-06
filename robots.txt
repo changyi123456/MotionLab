@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://motionlab-tracker-guide.netlify.app/sitemap.xml
+
